@@ -3,7 +3,7 @@ package Char::Elatin5;
 #
 # Char::Elatin5 - Run-time routines for Char/Latin5.pm
 #
-# Copyright (c) 2008, 2009, 2010, 2011, 2012 INABA Hitoshi <ina@cpan.org>
+# Copyright (c) 2008, 2009, 2010, 2011, 2012, 2013 INABA Hitoshi <ina@cpan.org>
 #
 ######################################################################
 
@@ -27,7 +27,7 @@ BEGIN {
 # (and so on)
 
 BEGIN { eval q{ use vars qw($VERSION) } }
-$VERSION = sprintf '%d.%02d', q$Revision: 0.84 $ =~ /(\d+)/xmsg;
+$VERSION = sprintf '%d.%02d', q$Revision: 0.85 $ =~ /(\d+)/xmsg;
 
 BEGIN {
     my $PERL5LIB = __FILE__;
@@ -87,14 +87,14 @@ BEGIN {
 
         my $ref = \*{$genpkg . $name};
         delete $$genpkg{$name};
-        $ref;
+        return $ref;
     }
 
     sub qualify ($;$) {
         my ($name) = @_;
         if (!ref($name) && (Char::Elatin5::index($name, '::') == -1) && (Char::Elatin5::index($name, "'") == -1)) {
             my $pkg;
-            my %global = map {$_ => 1} qw(ARGV ARGVOUT ENV INC SIG STDERR STDIN STDOUT);
+            my %global = map {$_ => 1} qw(ARGV ARGVOUT ENV INC SIG STDERR STDIN STDOUT DATA);
 
             # Global names: special character, "^xyz", or other.
             if ($name =~ /^(([^a-z])|(\^[a-z_]+))\z/i || $global{$name}) {
@@ -107,7 +107,7 @@ BEGIN {
             }
             $name = $pkg . "::" . $name;
         }
-        $name;
+        return $name;
     }
 
     sub qualify_to_ref ($;$) {
@@ -118,9 +118,14 @@ BEGIN {
     }
 }
 
+# Column: local $@
+# in Chapter 9. Osaete okitai Perl no kiso
+# of ISBN 10: 4798119172 | ISBN 13: 978-4798119175 MODAN Perl NYUMON
+# (and so on)
+
 # use strict; if strict.pm exists
 BEGIN {
-    if (eval {CORE::require strict}) {
+    if (eval { local $@; CORE::require strict }) {
         strict::->import;
     }
 }
@@ -139,10 +144,10 @@ sub LOCK_UN() {8}
 sub LOCK_NB() {4}
 
 # instead of Carp.pm
-sub carp(@);
-sub croak(@);
-sub cluck(@);
-sub confess(@);
+sub carp;
+sub croak;
+sub cluck;
+sub confess;
 
 my $your_char = q{[\x00-\xFF]};
 
@@ -302,7 +307,7 @@ else {
 #
 # @ARGV wildcard globbing
 #
-sub import() {
+sub import {
 
     if ($^O =~ /\A (?: MSWin32 | NetWare | symbian | dos ) \z/oxms) {
         my @argv = ();
@@ -337,10 +342,28 @@ sub import() {
     }
 }
 
+# P.230 Care with Prototypes
+# in Chapter 6: Subroutines
+# of ISBN 0-596-00027-8 Programming Perl Third Edition.
+#
+# If you aren't careful, you can get yourself into trouble with prototypes.
+# But if you are careful, you can do a lot of neat things with them. This is
+# all very powerful, of course, and should only be used in moderation to make
+# the world a better place.
+
+# P.332 Care with Prototypes
+# in Chapter 7: Subroutines
+# of ISBN 978-0-596-00492-7 Programming Perl 4th Edition.
+#
+# If you aren't careful, you can get yourself into trouble with prototypes.
+# But if you are careful, you can do a lot of neat things with them. This is
+# all very powerful, of course, and should only be used in moderation to make
+# the world a better place.
+
 #
 # Prototypes of subroutines
 #
-sub unimport() {}
+sub unimport {}
 sub Char::Elatin5::split(;$$$);
 sub Char::Elatin5::tr($$$$;$);
 sub Char::Elatin5::chop(@);
@@ -356,9 +379,9 @@ sub Char::Elatin5::uc(@);
 sub Char::Elatin5::uc_();
 sub Char::Elatin5::fc(@);
 sub Char::Elatin5::fc_();
-sub Char::Elatin5::ignorecase(@);
-sub Char::Elatin5::classic_character_class($);
-sub Char::Elatin5::capture($);
+sub Char::Elatin5::ignorecase;
+sub Char::Elatin5::classic_character_class;
+sub Char::Elatin5::capture;
 sub Char::Elatin5::chr(;$);
 sub Char::Elatin5::chr_();
 sub Char::Elatin5::glob($);
@@ -367,6 +390,7 @@ sub Char::Elatin5::glob_();
 sub Char::Latin5::ord(;$);
 sub Char::Latin5::ord_();
 sub Char::Latin5::reverse(@);
+sub Char::Latin5::getc(;*@);
 sub Char::Latin5::length(;$);
 sub Char::Latin5::substr($$;$$);
 sub Char::Latin5::index($$;$);
@@ -934,7 +958,7 @@ sub Char::Elatin5::fc_() {
 # Latin-5 regexp capture
 #
 {
-    sub Char::Elatin5::capture($) {
+    sub Char::Elatin5::capture {
         return $_[0];
     }
 }
@@ -942,7 +966,7 @@ sub Char::Elatin5::fc_() {
 #
 # Latin-5 regexp ignore case modifier
 #
-sub Char::Elatin5::ignorecase(@) {
+sub Char::Elatin5::ignorecase {
 
     my @string = @_;
     my $metachar = qr/[\@\\|[\]{]/oxms;
@@ -1079,7 +1103,7 @@ sub Char::Elatin5::ignorecase(@) {
 #
 # classic character class ( \D \S \W \d \s \w \C \X \H \V \h \v \R \N \b \B )
 #
-sub classic_character_class($) {
+sub Char::Elatin5::classic_character_class {
     my($char) = @_;
 
     return {
@@ -1425,7 +1449,7 @@ sub _octets {
         my($z1) = unpack 'C', $_[1];
 
         if ($a1 > $z1) {
-            croak 'Invalid [] range in regexp (ord(A) > ord(B)) ' . '\x' . unpack('H*',$a1) . '-\x' . unpack('H*',$z1);
+            croak 'Invalid [] range in regexp (CORE::ord(A) > CORE::ord(B)) ' . '\x' . unpack('H*',$a1) . '-\x' . unpack('H*',$z1);
         }
 
         if ($a1 == $z1) {
@@ -1694,7 +1718,7 @@ sub _charlist {
             }
             elsif (CORE::length($char[$i-1]) == CORE::length($char[$i+1])) {
                 if ($char[$i-1] gt $char[$i+1]) {
-                    croak 'Invalid [] range in regexp (ord(A) > ord(B)) ' . '\x' . unpack('H*',$char[$i-1]) . '-\x' . unpack('H*',$char[$i+1]);
+                    croak 'Invalid [] range in regexp (CORE::ord(A) > CORE::ord(B)) ' . '\x' . unpack('H*',$char[$i-1]) . '-\x' . unpack('H*',$char[$i+1]);
                 }
             }
 
@@ -2553,6 +2577,27 @@ sub Char::Latin5::reverse(@) {
 }
 
 #
+# Latin-5 getc (with parameter, without parameter)
+#
+sub Char::Latin5::getc(;*@) {
+
+    my $fh = @_ ? qualify_to_ref(shift) : \*STDIN;
+    croak 'Too many arguments for Char::Latin5::getc' if @_ and not wantarray;
+
+    my @length = sort { $a <=> $b } keys %range_tr;
+    my $getc = '';
+    for my $length ($length[0] .. $length[-1]) {
+        $getc .= CORE::getc($fh);
+        if (exists $range_tr{CORE::length($getc)}) {
+            if ($getc =~ /\A ${Char::Elatin5::dot_s} \z/oxms) {
+                return wantarray ? ($getc,@_) : $getc;
+            }
+        }
+    }
+    return wantarray ? ($getc,@_) : $getc;
+}
+
+#
 # Latin-5 length by character
 #
 sub Char::Latin5::length(;$) {
@@ -2649,7 +2694,7 @@ sub Char::Latin5::rindex($$;$) {
 #
 # instead of Carp::carp
 #
-sub carp(@) {
+sub carp {
     my($package,$filename,$line) = caller(1);
     print STDERR "@_ at $filename line $line.\n";
 }
@@ -2657,7 +2702,7 @@ sub carp(@) {
 #
 # instead of Carp::croak
 #
-sub croak(@) {
+sub croak {
     my($package,$filename,$line) = caller(1);
     print STDERR "@_ at $filename line $line.\n";
     die "\n";
@@ -2666,14 +2711,14 @@ sub croak(@) {
 #
 # instead of Carp::cluck
 #
-sub cluck(@) {
+sub cluck {
     my $i = 0;
     my @cluck = ();
     while (my($package,$filename,$line,$subroutine) = caller($i)) {
         push @cluck, "[$i] $filename($line) $package::$subroutine\n";
         $i++;
     }
-    print STDERR reverse @cluck;
+    print STDERR CORE::reverse @cluck;
     print STDERR "\n";
     carp @_;
 }
@@ -2681,14 +2726,14 @@ sub cluck(@) {
 #
 # instead of Carp::confess
 #
-sub confess(@) {
+sub confess {
     my $i = 0;
     my @confess = ();
     while (my($package,$filename,$line,$subroutine) = caller($i)) {
         push @confess, "[$i] $filename($line) $package::$subroutine\n";
         $i++;
     }
-    print STDERR reverse @confess;
+    print STDERR CORE::reverse @confess;
     print STDERR "\n";
     croak @_;
 }
@@ -3209,6 +3254,10 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
   # absolute path
   @abspath_file = split(/\n/,`dir /s /b wildcard\\here*.txt 2>NUL`);
+
+  # on COMMAND.COM
+  @relpath_file = split(/\n/,`dir /b wildcard\\here*.txt`);
+  @abspath_file = split(/\n/,`dir /s /b wildcard\\here*.txt`);
 
 =cut
 
