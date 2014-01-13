@@ -1,14 +1,12 @@
 NAME
 
-       Char::Latin5 - Source code filter for Latin-5 script (Imitation JPerl)
+       Latin5 - Source code filter for Latin-5 script (Imitation JPerl)
 
 SYNOPSIS
 
     In your script:
 
-      use Char::Latin5; # CPAN formal style
-         or
-      use Latin5; # casual style
+      use Latin5;
 
     At command prompt:
 
